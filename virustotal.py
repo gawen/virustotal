@@ -249,6 +249,10 @@ class Report(object):
             0: "ko",
         }.get(self.response_code, "unknown")
 
+    @property
+    def done(self):
+        return self.state == "ok"
+
     def __iter__(self):
         for antivirus, report in self.scans.iteritems():
             yield (
@@ -267,7 +271,59 @@ class Report(object):
             self.update()
 
 def main():
-    pass
+    import sys
+
+    logger.setLevel(logging.DEBUG)
+    logging.basicConfig()
+
+    # This is my API key. Please use it only for examples, not for any production stuff
+    # You can get an API key signing-up on VirusTotal. It takes 2min.
+    API_KEY = "22c6d056f1e99b8fb4fa6c2a811178723735e9840de18fa2df83fccfd21c95a0"
+
+    def print_usage():
+        print "usage: %s (scan|get) resource" % (sys.argv[0], )
+        print "'scan' asks virustotal to scan the file, even if a report"
+        print "  is available. The resource must be a file."
+        print
+        print "'get' asks virustotal if a report is available for the given"
+        print "  resource."
+        print
+        print "A resource can be:"
+        print "- a hash (md5, sha1, sha256)"
+        print "- a scan ID"
+        print "- a filepath or URL"
+
+    if len(sys.argv) != 3:
+        print_usage()
+        return -1
+
+    action, resource = sys.argv[1:3]
+    
+    v = VirusTotal(API_KEY)
+
+    if action.lower() == "scan":
+        report = v.scan(resource, reanalyze = True)
+        print "Scan started:", report
+        report.join()
+        print "Scan finished:", report
+
+    elif action.lower() == "get":
+        report = v.get(resource)
+
+        if report is None:
+            print "No report is available."
+            return 0
+
+    else:
+        print "ERROR: unknown action"
+        print_usage()
+        return -1
+
+    print
+    print "*" * 80
+    print "Report:"
+    for antivirus, virus in report:
+        print "- %s (%s, %s):\t%s" % (antivirus[0], antivirus[1], antivirus[2], virus, )
 
 if __name__ == "__main__":
     main()
