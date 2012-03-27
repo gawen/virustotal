@@ -70,7 +70,7 @@ For example,
 You can set its parameter ``reanalyze`` to force VirusTotal to re-scan the file.
 
     # Force to re-scan EICAR (see Links section)
-    report = v.scan(StringIO.StringIO("X5O!P%@AP[4\PZX54(P^)7CC)7}$EICAR-STANDARD-ANTIVIRUS-TEST-FILE!$H+H*"))
+    report = v.scan(StringIO.StringIO("X5O!P%@AP[4\PZX54(P^)7CC)7}$EICAR-STANDARD-ANTIVIRUS-TEST-FILE!$H+H*"), reanalyze = True)
 
 
 ### Report object
