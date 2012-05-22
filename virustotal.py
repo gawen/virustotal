@@ -4,7 +4,7 @@ __author__ = "Gawen Arab"
 __copyright__ = "Copyright 2012, Gawen Arab"
 __credits__ = ["Gawen Arab"]
 __license__ = "MIT"
-__version__ = "1.0.1"
+__version__ = "1.0.2"
 __maintainer__ = "Gawen Arab"
 __email__ = "g@wenarab.com"
 __status__ = "Production"
@@ -21,6 +21,8 @@ import re
 import logging
 
 logger = logging.getLogger("virustotal")
+
+FILE_SIZE_LIMIT = 30 * 1024 * 1024   # 30MB
 
 class postfile:
     @staticmethod
@@ -76,6 +78,9 @@ class postfile:
 
 class VirusTotal(object):
     _SCAN_ID_RE = re.compile(r"^[a-fA-F0-9]{64}-[0-9]{10}$")
+
+    class EntityTooLarge(Exception):
+        pass
 
     def __init__(self, api_key, limit_per_min = None):
         limit_per_min = limit_per_min if limit_per_min is not None else 4
@@ -181,6 +186,9 @@ class VirusTotal(object):
 
         if o[1] is None:
             o[1] = "file"
+
+        if len(o[2]) > FILE_SIZE_LIMIT:
+            raise self.EntityTooLarge()
 
         self._limit_call_handler()
         ret_json = postfile.post_multipart(

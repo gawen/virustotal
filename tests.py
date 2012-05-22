@@ -40,3 +40,13 @@ def test_scan_eicar_force():
 def test_get_unknown_report():      assert v.get(StringIO.StringIO(RAND_STR)) is None
 def test_get_unknown_report_hash(): assert v.get(hashlib.md5(RAND_STR).hexdigest()) is None
 
+def test_entity_too_large():
+    size = virustotal.FILE_SIZE_LIMIT + (1 * 1024 * 1024)
+    entity_too_large = StringIO.StringIO(size * "a")
+    try:
+        r = v.scan(entity_too_large, reanalyze = True)
+
+    except virustotal.VirusTotal.EntityTooLarge:
+        return
+    
+    assert False, "Exception VirusTotal.EntityTooLarge should be raised."
