@@ -32,7 +32,7 @@ class postfile:
         Return the server's response page.
         """
         content_type, body = postfile.encode_multipart_formdata(fields, files)
-        h = httplib.HTTP(host)
+        h = httplib.HTTPS(host)
         h.putrequest('POST', selector)
         h.putheader('content-type', content_type)
         h.putheader('content-length', str(len(body)))
@@ -65,7 +65,7 @@ class postfile:
             L.append(value)
         L.append('--' + BOUNDARY + '--')
         L.append('')
-        body = CRLF.join(L)
+        body = CRLF.join((bytes(i) for i in L))
         content_type = 'multipart/form-data; boundary=%s' % BOUNDARY
         
         return content_type, body
