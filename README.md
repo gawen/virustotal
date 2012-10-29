@@ -123,6 +123,10 @@ To ask VirusTotal to get the EICAR file report (see Links section).
 
     python virustotal.py get 44D88612FEA8A8F36DE82E1278ABB02F
 
+Or test if this repository is virus-free ;-)
+    
+    python virustotal.py scan *
+
 ## Links
 
 - [Public API documentation](https://www.virustotal.com/documentation/public-api/)

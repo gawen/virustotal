@@ -4,7 +4,7 @@ __author__ = "Gawen Arab"
 __copyright__ = "Copyright 2012, Gawen Arab"
 __credits__ = ["Gawen Arab"]
 __license__ = "MIT"
-__version__ = "1.0.2"
+__version__ = "1.0.3"
 __maintainer__ = "Gawen Arab"
 __email__ = "g@wenarab.com"
 __status__ = "Production"
@@ -19,6 +19,7 @@ import json
 import time
 import re
 import logging
+import threading
 
 logger = logging.getLogger("virustotal")
 
@@ -82,6 +83,9 @@ class VirusTotal(object):
     class EntityTooLarge(Exception):
         pass
 
+    class ApiError(Exception):
+        pass
+
     def __init__(self, api_key, limit_per_min = None):
         limit_per_min = limit_per_min if limit_per_min is not None else 4
 
@@ -90,23 +94,25 @@ class VirusTotal(object):
         self.api_key = api_key
         self.limit_per_min = limit_per_min
         self.limits = []
+        self.limit_lock = threading.Lock()
 
     def __repr__(self):
         return "<VirusTotal proxy>"
 
     def _limit_call_handler(self):
-        if self.limit_per_min <= 0:
-            return
+        with self.limit_lock:
+            if self.limit_per_min <= 0:
+                return
 
-        now = time.time()
-        self.limits = [l for l in self.limits if l > now]
-        self.limits.append(now + 60)
-        
-        if len(self.limits) >= self.limit_per_min:
-            wait = self.limits[0] - now
-            logger.info("Wait for %.2fs because of quotat limit.")
-            time.sleep(self.limits[0] - now)
-        
+            now = time.time()
+            self.limits = [l for l in self.limits if l > now]
+            self.limits.append(now + 60)
+            
+            if len(self.limits) >= self.limit_per_min:
+                wait = self.limits[0] - now
+                logger.info("Wait for %.2fs because of quotat limit." % (self.limits[0] - now, ))
+                time.sleep(self.limits[0] - now)
+            
     @classmethod
     def _fileobj_to_fcontent(cls, anything, filename = None):
         # anything can be:
@@ -212,8 +218,12 @@ class VirusTotal(object):
 class Report(object):
     def __new__(cls, r, parent):
         if isinstance(r, basestring):
-            r = json.loads(r)
-        
+            try:
+                r = json.loads(r)
+
+            except ValueError:
+                raise VirusTotal.ApiError()
+
         assert isinstance(r, dict)
         
         if r["response_code"] == 0:
@@ -280,58 +290,100 @@ class Report(object):
 
 def main():
     import sys
+    import optparse
+    import threading
+    import Queue
+    import glob
 
-    logger.setLevel(logging.DEBUG)
+    parser = optparse.OptionParser(usage = """%prog [-k API_KEY] (scan|get) RESOURCE ...
+'scan' asks virustotal to scan the file, even if a report
+  is available. The resource must be a file.
+
+'get' asks virustotal if a report is available for the given
+  resource.
+
+A resource can be:
+- a hash (md5, sha1, sha256)
+- a scan ID
+- a filepath or URL""")
+    parser.add_option("-k", "--key", dest = "api_key", default = None, help = "Set VirusTotal API key.")
+    parser.add_option("-l", "--limit", dest = "limit_per_min", default = "4", help = "Set limit per minute API call. VirusTotal specifies no more 4 API calls must be done per minute. You can change this value, but VirusTotal maybe ignores some calls and may make this script bug.")
+    parser.add_option("-v", "--verbose", dest = "verbose", action = "store_true", default = False, help = "Verbose.")
+    (options, arguments) = parser.parse_args()
+
+    logging.getLogger().setLevel(logging.DEBUG if options.verbose else logging.WARNING)
     logging.basicConfig()
 
     # This is my API key. Please use it only for examples, not for any production stuff
     # You can get an API key signing-up on VirusTotal. It takes 2min.
     API_KEY = "22c6d056f1e99b8fb4fa6c2a811178723735e9840de18fa2df83fccfd21c95a0"
 
-    def print_usage():
-        print "usage: %s (scan|get) resource" % (sys.argv[0], )
-        print "'scan' asks virustotal to scan the file, even if a report"
-        print "  is available. The resource must be a file."
-        print
-        print "'get' asks virustotal if a report is available for the given"
-        print "  resource."
-        print
-        print "A resource can be:"
-        print "- a hash (md5, sha1, sha256)"
-        print "- a scan ID"
-        print "- a filepath or URL"
+    api_key = options.api_key or API_KEY
 
-    if len(sys.argv) != 3:
-        print_usage()
+    if len(sys.argv) < 3:
+        parser.print_usage()
+        return -1
+    
+    action = arguments.pop(0)
+
+    if action.lower() not in ("scan", "get", ):
+        print "ERROR: unknown action"
         return -1
 
-    action, resource = sys.argv[1:3]
-    
-    v = VirusTotal(API_KEY)
+    resources = []
+    for argument in arguments:
+        for resource in glob.glob(argument):
+            resources.append(resource)
 
-    if action.lower() == "scan":
-        report = v.scan(resource, reanalyze = True)
-        print "Scan started:", report
-        report.join()
-        print "Scan finished:", report
+    v = VirusTotal(API_KEY, limit_per_min = int(options.limit_per_min))
 
-    elif action.lower() == "get":
-        report = v.get(resource)
+    q = Queue.Queue()
+    def analyze(resource):
+        try:
+            if action.lower() == "scan":
+                report = v.scan(resource, reanalyze = True)
+                print "%s: Scan started: %s" % (resource, report, )
+                report.join()
+                q.put((resource, report))
+                print "%s: Scan finished: %s" % (resource, report, )
+
+            elif action.lower() == "get":
+                report = v.get(resource)
+                q.put((resource, report))
+        
+        except VirusTotal.ApiError:
+            print "VirusTotal returned a non correct response. It may be because the script does too many requests at the minute. See the parameter -l"
+
+    threads = []
+    for resource in resources:
+        thread = threading.Thread(target = analyze, args = (resource, ))
+        threads.append(thread)
+
+        thread.daemon = True
+        thread.start()
+
+    for thread in threads:
+        while thread.is_alive():
+            try:
+                thread.join(0.1)
+
+            except KeyboardInterrupt:
+                return
+
+    while not q.empty():
+        resource, report = q.get()
+        
+        print "=== %s ===" % (resource, )
 
         if report is None:
             print "No report is available."
             return 0
 
-    else:
-        print "ERROR: unknown action"
-        print_usage()
-        return -1
+        print "Report:"
+        for antivirus, virus in report:
+            print "- %s (%s, %s):\t%s" % (antivirus[0], antivirus[1], antivirus[2], virus, )
 
-    print
-    print "*" * 80
-    print "Report:"
-    for antivirus, virus in report:
-        print "- %s (%s, %s):\t%s" % (antivirus[0], antivirus[1], antivirus[2], virus, )
+        print
 
 if __name__ == "__main__":
     main()
