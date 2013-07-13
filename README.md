@@ -1,4 +1,3 @@
-
 # virustotal
 
 ``virustotal`` is a Python module to use the [Virustotal](https://www.virustotal.com/) public API, a free service that analyzes files from malwares.
@@ -19,7 +18,7 @@ Install ``virustotal`` using setuptools' related softwares.
 or clone this repos
     
     git clone git://github.com/Gawen/virustotal.git
-    cd virustotal.git
+    cd virustotal
     python setup.py install
 
 ### Import
