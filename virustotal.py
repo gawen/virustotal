@@ -329,7 +329,7 @@ A resource can be:
         print "ERROR: unknown action"
         return -1
 
-    v = VirusTotal(API_KEY, limit_per_min = int(options.limit_per_min))
+    v = VirusTotal(api_key, limit_per_min = int(options.limit_per_min))
 
     q = Queue.Queue()
     def analyze(resource):
