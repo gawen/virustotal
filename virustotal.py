@@ -131,7 +131,7 @@ class VirusTotal(object):
 
             # Is URL ?
             if urlparse.urlparse(anything).scheme:
-                fh = urllib2.urlopen(anything)
+                return ["url", anything]
 
             else:
                 # it's file
@@ -166,12 +166,16 @@ class VirusTotal(object):
         })
 
         self._limit_call_handler()
-        req = urllib2.urlopen(urllib2.Request(
-           "http://www.virustotal.com/vtapi/v2/file/report",
-            data,
-        )).read()
 
-        report = Report(req, self)
+        if o[0] == "url":
+            req = urllib2.Request(
+                    "http://www.virustotal.com/vtapi/v2/url/report", data)
+        else:
+            req = urllib2.Request(
+                    "http://www.virustotal.com/vtapi/v2/file/report", data)
+
+        response = urllib2.urlopen(req).read()
+        report = Report(response, self)
 
         return report
     
