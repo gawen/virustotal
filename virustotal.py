@@ -185,7 +185,7 @@ class VirusTotal(object):
                         report.append(rep_item)
                     else:
                         for ret_data in r:
-                            rep_item = Report(json.dumps(ret_data), self)
+                            rep_item = Report(ret_data, self)
                             report.append(rep_item)
                 except ValueError:
                     raise VirusTotal.ApiError()
