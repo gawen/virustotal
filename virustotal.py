@@ -116,10 +116,14 @@ class VirusTotal(object):
     @classmethod
     def _fileobj_to_fcontent(cls, anything, filename = None):
         # anything can be:
+        # - A list of hashes
         # - A MD5, SHA1, SHA256
         # - A scan id
         # - A filepath or URL
         # - A file object
+
+        if isinstance(anything, list):
+            return ["multihash", ', '.join(p for p in anything), filename]
 
         if isinstance(anything, basestring):
             # Is MD5, SHA1, SHA256?
@@ -171,7 +175,22 @@ class VirusTotal(object):
             data,
         )).read()
 
-        report = Report(req, self)
+        if o[0] == "multihash":
+            report = []
+            if isinstance(req, basestring):
+                try:
+                    r = json.loads(req)
+                    if isinstance(r, dict): # multihash basically just had one hash
+                        rep_item = Report(r, self)
+                        report.append(rep_item)
+                    else:
+                        for ret_data in r:
+                            rep_item = Report(json.dumps(ret_data), self)
+                            report.append(rep_item)
+                except ValueError:
+                    raise VirusTotal.ApiError()
+        else:
+            report = Report(req, self)
 
         return report
     
@@ -220,10 +239,8 @@ class Report(object):
         if isinstance(r, basestring):
             try:
                 r = json.loads(r)
-
             except ValueError:
                 raise VirusTotal.ApiError()
-
         assert isinstance(r, dict)
         
         if r["response_code"] == 0:
@@ -387,3 +404,4 @@ A resource can be:
 
 if __name__ == "__main__":
     main()
+
