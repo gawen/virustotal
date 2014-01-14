@@ -130,7 +130,7 @@ class VirusTotal(object):
                 return ["resource", anything, filename]
 
             # Is URL ?
-            if urlparse.urlparse(anything).scheme:
+            if urlparse.urlparse(anything).netloc:
                 fh = urllib2.urlopen(anything)
 
             else:
