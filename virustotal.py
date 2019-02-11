@@ -42,7 +42,7 @@ class postfile:
         h.endheaders()
         h.send(body)
         errcode, errmsg, headers = h.getreply()
-    
+
         return h.file.read()
 
     @staticmethod
@@ -70,7 +70,7 @@ class postfile:
         L.append('')
         body = CRLF.join((bytes(i) for i in L))
         content_type = 'multipart/form-data; boundary=%s' % BOUNDARY
-        
+
         return content_type, body
 
     @staticmethod
@@ -107,12 +107,12 @@ class VirusTotal(object):
             now = time.time()
             self.limits = [l for l in self.limits if l > now]
             self.limits.append(now + 60)
-            
+
             if len(self.limits) >= self.limit_per_min:
                 wait = self.limits[0] - now
                 logger.info("Wait for %.2fs because of quotat limit." % (self.limits[0] - now, ))
                 time.sleep(self.limits[0] - now)
-            
+
     @classmethod
     def _fileobj_to_fcontent(cls, anything, filename = None):
         # anything can be:
@@ -174,10 +174,10 @@ class VirusTotal(object):
         report = Report(req, self)
 
         return report
-    
+
     def scan(self, anything, filename = None, reanalyze = None):
         reanalyze = reanalyze if reanalyze is not None else False
-        
+
         if not reanalyze:
             # Check if already exists
             report = self.get(anything, filename)
@@ -209,7 +209,7 @@ class VirusTotal(object):
         )
 
         report = Report(ret_json, self)
-        
+
         if report:
             report.update()
 
@@ -225,7 +225,7 @@ class Report(object):
                 raise VirusTotal.ApiError()
 
         assert isinstance(r, dict)
-        
+
         if r["response_code"] == 0:
             return None
 
@@ -316,14 +316,14 @@ A resource can be:
 
     # This is my API key. Please use it only for examples, not for any production stuff
     # You can get an API key signing-up on VirusTotal. It takes 2min.
-    API_KEY = "22c6d056f1e99b8fb4fa6c2a811178723735e9840de18fa2df83fccfd21c95a0"
+    API_KEY = "XXX"
 
     api_key = options.api_key or API_KEY
 
     if len(sys.argv) < 3:
         parser.print_usage()
         return -1
-    
+
     action = arguments.pop(0)
 
     if action.lower() not in ("scan", "get", ):
@@ -350,7 +350,7 @@ A resource can be:
             elif action.lower() == "get":
                 report = v.get(resource)
                 q.put((resource, report))
-        
+
         except VirusTotal.ApiError:
             print "VirusTotal returned a non correct response. It may be because the script does too many requests at the minute. See the parameter -l"
 
@@ -372,7 +372,7 @@ A resource can be:
 
     while not q.empty():
         resource, report = q.get()
-        
+
         print "=== %s ===" % (resource, )
 
         if report is None:
