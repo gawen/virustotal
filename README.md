@@ -35,6 +35,7 @@ Instantiate the handler's class.
 
 Use the method ``get()``. Its first parameter can be :
 
+- A list of hashes (MD5, SHA1, SHA256) - returns a list of reports
 - A hash (MD5, SHA1, SHA256)
 - A scan-id (VirusTotal's scan UID)
 - A file object (file, socket, StringIO)
@@ -50,6 +51,9 @@ For example,
 
     # EICAR's MD5 (see Links section)
     report = v.get("44D88612FEA8A8F36DE82E1278ABB02F")
+
+    # Multihash - Makes a batch request so it saves on your API request limit, returns a list of reports
+    report_list = v.get(["100b471f6735e4a7d736c7e371289af8","0a624a3caf4fe3ccd7ef83412bc9d155","b644800a0cc59363ba7b51699f9ac20e"])
 
 ### Scan a file
 
