@@ -380,9 +380,10 @@ A resource can be:
             return 0
 
         print "Report:"
+        print ' {a1:<20} | {a2:<13} | {a3:<8} | {v:<}'.format(a1='Scanner',a2='EngineVersion',a3='DB Date',v='Virus')
+        print ' {s:->20} | {s:->13} | {s:->8} | {s:->28}'.format(s='')
         for antivirus, virus in report:
-            print "- %s (%s, %s):\t%s" % (antivirus[0], antivirus[1], antivirus[2], virus, )
-
+            print ' {a1:<20} | {a2:<13} | {a3:<8} | {v:<}'.format(a1=antivirus[0], a2=antivirus[1], a3=antivirus[2], v=virus,)
         print
 
 if __name__ == "__main__":
