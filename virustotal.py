@@ -293,7 +293,6 @@ def main():
     import optparse
     import threading
     import Queue
-    import glob
 
     parser = optparse.OptionParser(usage = """%prog [-k API_KEY] (scan|get) RESOURCE ...
 'scan' asks virustotal to scan the file, even if a report
@@ -330,12 +329,7 @@ A resource can be:
         print "ERROR: unknown action"
         return -1
 
-    resources = []
-    for argument in arguments:
-        for resource in glob.glob(argument):
-            resources.append(resource)
-
-    v = VirusTotal(API_KEY, limit_per_min = int(options.limit_per_min))
+    v = VirusTotal(api_key, limit_per_min = int(options.limit_per_min))
 
     q = Queue.Queue()
     def analyze(resource):
@@ -355,7 +349,7 @@ A resource can be:
             print "VirusTotal returned a non correct response. It may be because the script does too many requests at the minute. See the parameter -l"
 
     threads = []
-    for resource in resources:
+    for resource in arguments:
         thread = threading.Thread(target = analyze, args = (resource, ))
         threads.append(thread)
 
